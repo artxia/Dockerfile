@@ -28,6 +28,6 @@
 		"FLASK_SECRET_KEY": {
 			"description": "DATABASE",
 			"value": ""
-		},
+		}
 	}
 }
