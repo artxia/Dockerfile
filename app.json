@@ -27,9 +27,8 @@
 			"required": false
 		},
 		"FLASK_SECRET_KEY": {
-			"description": "DATABASE",
-			"value": "",
-			"required": false
+			"description": "Random characters",
+			"value": "123456"
 		}
 	}
 }
