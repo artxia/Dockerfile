@@ -1,0 +1,35 @@
+{
+	"name": "kuhero",
+	"description": "kuhero",
+	"keywords": ["kuhero"],
+	"repository": "https://github.com",
+	"stack": "container",
+	"env": {
+		"CLIENT_ID": {
+			"description": "*client credentials to get access to authorization",
+			"value": ""
+		},
+		"CLIENT_SECRET": {
+			"description": "*client credentials to get access to authorization",
+			"value": ""
+		},
+		"AUTH_REDIRECT_URI": {
+			"description": "Authorized redirect URIs",
+			"value": "http://localhost/callback"
+		},
+		"BASE_URI": {
+			"description": "Authorized JavaScript origins",
+			"value": "http://localhost"
+		},
+		"SQLALCHEMY_DATABASE_URI": {
+			"description": "DATABASE",
+			"value": "",
+			"required": false
+		},
+		"FLASK_SECRET_KEY": {
+			"description": "DATABASE",
+			"value": "",
+			"required": false
+		}
+	}
+}
