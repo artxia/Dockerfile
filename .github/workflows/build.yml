@@ -10,7 +10,7 @@ on:
     inputs:
 
 env:
-  IMAGE_NAME: Master
+  IMAGE_NAME: drive-copier-docker
 
 jobs:
   build:
