@@ -24,10 +24,12 @@
 		"SQLALCHEMY_DATABASE_URI": {
 			"description": "DATABASE",
 			"value": ""
+			"required":false
 		},
 		"FLASK_SECRET_KEY": {
 			"description": "DATABASE",
 			"value": ""
+			"required":false
 		}
 	}
 }
