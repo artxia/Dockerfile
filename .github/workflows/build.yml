@@ -1,5 +1,4 @@
-name: Auto Build Master
-
+name: Auto Build
 on:
   push:
 #    branches:
