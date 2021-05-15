@@ -22,6 +22,7 @@ jobs:
         git-config-name: GitHub Action
         git-config-email: action@github.com
         branch: drive-copier
+        folder: drive-copier
         commit-message: Action Update
         clean: true
         single-commit: false
