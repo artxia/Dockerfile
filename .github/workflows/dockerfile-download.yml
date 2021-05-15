@@ -1,0 +1,29 @@
+name: Dockerfile Download
+
+on:
+#  schedule:
+#    - cron: 0 4 * * 5
+  workflow_dispatch:
+    inputs:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Git Clone Repository
+      run: |
+        git clone https://github.com/artxia/Dockerfile.git gitclone
+
+    - name: Deploy to Pages
+      uses: JamesIves/github-pages-deploy-action@4.1.1
+      with:
+        git-config-name: GitHub Action
+        git-config-email: action@github.com
+        branch: main
+        folder: gitclone
+        target-folder: Dockerfile
+        commit-message: Action Update
+        clean: true
+        single-commit: false
