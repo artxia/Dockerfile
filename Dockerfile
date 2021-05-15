@@ -16,5 +16,7 @@ RUN pip install -r requirements.txt
 RUN pip install gunicorn
 COPY ./app /app
 
+ADD start.sh /start.sh
+RUN chmod +x /start.sh
 
-CMD exec gunicorn --workers 1 --threads 8 --timeout 0 app:app
+CMD /start.sh
