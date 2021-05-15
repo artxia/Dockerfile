@@ -25,4 +25,9 @@ jobs:
         folder: drive-copier
         commit-message: Action Update
         clean: true
+        clean-exclude: |
+          Dockerfile.heroku
+          app.json
+          heroku.yml
+          start.sh
         single-commit: false
