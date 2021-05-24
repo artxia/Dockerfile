@@ -27,5 +27,6 @@ jobs:
         clean: true
         clean-exclude: |
           Dockerfile
-          start.sh
+          entrypoint.sh
+          redis.conf
         single-commit: false
