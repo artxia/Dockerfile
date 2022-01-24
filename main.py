@@ -6,13 +6,17 @@ import sys
 from pathlib import Path
 from time import time
 import argparse
+from datetime import datetime
 
 import redis
 import yaml
 from telethon import TelegramClient, events, Button
+from telethon.tl import types
+from telethon.tl.functions.bots import SetBotCommandsRequest
 
 from indexer import Indexer
-from log import get_logger, log_exception
+from log import get_logger
+from utils import strip_content, get_share_id, format_entity_name
 
 os.chdir(Path(sys.argv[0]).parent)
 
@@ -26,13 +30,10 @@ parser.add_argument('-c', '--clear', action='store_const', const=True, default=F
                     help='Build a new index from the scratch')
 parser.add_argument('-f', '--config', action='store', default='searcher.yaml',
                     help='Specify where the configuration yaml file lies')
-parser.add_argument('-l', '--log', action='store', default=None,
-                    help='The path of logs')
 
 args = parser.parse_args()
 will_clear = args.clear
 config_path = args.config
-log_path = args.log
 
 with open(config_path, 'r', encoding='utf8') as fp:
     config = yaml.safe_load(fp)
@@ -41,23 +42,34 @@ redis_port = config.get('redis', {}).get('port', '6379')
 api_id = config['telegram']['api_id']
 api_hash = config['telegram']['api_hash']
 bot_token = config['telegram']['bot_token']
-admin_id = config['telegram']['admin_id']
-chat_ids = config['chat_id']
+admin_id = get_share_id(config['telegram']['admin_id'])
+chat_ids = list(map(get_share_id, config['chat_id']))
 page_len = config.get('search', {}).get('page_len', 10)
 welcome_message = config.get('welcome_message', 'Welcome')
 
 proxy_protocol = config.get('proxy', {}).get('protocol', None)
+assert proxy_protocol in ('socks5', 'socks4', 'http', None)
 proxy_host = config.get('proxy', {}).get('host', None)
 proxy_port = config.get('proxy', {}).get('port', None)
 
+runtime_dir = Path(config.get('runtime_dir', '.'))
+
 proxy = None
-if proxy_protocol and proxy_host and proxy_port:
+if not proxy_protocol and (proxy_host or proxy_port):
+    logging.warning('Proxy protocol unspecified, proxy will not be enabled')
+elif proxy_protocol and proxy_host and proxy_port:
     proxy = (proxy_protocol, proxy_host, proxy_port)
 
 
 name = config.get('name', '')
 private_mode = config.get('private_mode', False)
 private_whitelist = config.get('private_whitelist', [])
+private_mode_strict = False
+private_whitelist_strict = None
+if isinstance(private_mode, str) and private_mode.lower() == 'strict':
+    private_mode = True
+    private_mode_strict = True
+    private_whitelist_strict = private_whitelist
 
 random_mode = config.get('random_mode', False)
 
@@ -65,21 +77,26 @@ random_mode = config.get('random_mode', False)
 # Prepare loggers, client connections, and 
 #################################################################################
 
+if not (Path(runtime_dir) / name).exists():
+    (Path(runtime_dir) / name).mkdir()
+session_dir = Path(runtime_dir) / name / 'session'
+index_dir = Path(runtime_dir) / name / 'index'
+if not session_dir.exists():
+    session_dir.mkdir()
+if not index_dir.exists():
+    index_dir.mkdir()
 
 logging.basicConfig(level=logging.INFO)
-logger = get_logger(log_path)
-indexer = Indexer(from_scratch=will_clear, index_name=f'{name}_index')
+logger = get_logger()
+indexer = Indexer(pickle_path=index_dir, from_scratch=will_clear, index_name=f'{name}_index')
 
 db = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
 
 loop = asyncio.get_event_loop()
 
-session_dir = Path(f'{name}_session')
-if not session_dir.exists():
-    session_dir.mkdir()
-
-client = TelegramClient(f'{name}_session/client', api_id, api_hash, loop=loop, proxy=proxy).start()
-bot = TelegramClient(f'{name}_session/bot', api_id, api_hash, loop=loop, proxy=proxy).start(bot_token=bot_token)
+client = TelegramClient(str(session_dir / 'client.session'), api_id, api_hash, loop=loop, proxy=proxy).start()
+bot = TelegramClient(str(session_dir / 'bot.session'), api_id, api_hash, loop=loop, proxy=proxy)\
+    .start(bot_token=bot_token)
 
 id_to_title = dict()  # a dictionary to translate chat id to chat title
 
@@ -88,17 +105,7 @@ id_to_title = dict()  # a dictionary to translate chat id to chat title
 # Handle message from the channel
 #################################################################################
 
-
-def strip_content(content: str) -> str:
-    return html.escape(content).replace('\n', ' ')
-
-
-def get_share_id(chat_id: int) -> int:
-    return chat_id if chat_id >= 0 else - chat_id - 1000000000000
-
-
 @client.on(events.NewMessage(chats=chat_ids))
-@log_exception(logger)
 async def client_message_handler(event):
     if event.raw_text and len(event.raw_text.strip()) >= 0:
         share_id = get_share_id(event.chat_id)
@@ -107,13 +114,12 @@ async def client_message_handler(event):
         indexer.index(
             content=strip_content(event.raw_text),
             url=url,
-            chat_id=event.chat_id,
+            chat_id=share_id,
             post_timestamp=event.date.timestamp(),
         )
 
 
 @client.on(events.MessageEdited(chats=chat_ids))
-@log_exception(logger)
 async def client_message_update_handler(event):
     if event.raw_text and len(event.raw_text.strip()) >= 0:
         share_id = get_share_id(event.chat_id)
@@ -123,11 +129,10 @@ async def client_message_update_handler(event):
 
 
 @client.on(events.MessageDeleted())
-@log_exception(logger)
 async def client_message_delete_handler(event):
-    if event.chat_id and event.chat_id in chat_ids:
+    share_id = get_share_id(event.chat_id)
+    if event.chat_id and share_id in chat_ids:
         for msg_id in event.deleted_ids:
-            share_id = get_share_id(event.chat_id)
             url = f'https://t.me/c/{share_id}/{msg_id}'
             logger.info(f'Delete message {url}')
             indexer.delete(url=url)
@@ -166,29 +171,35 @@ def render_respond_buttons(result, cur_page_num):
     ]
 
 
-@log_exception(logger)
-async def download_history():
+async def download_history(min_id, max_id):
     for chat_id in chat_ids:
         await bot.send_message(admin_id, f'开始下载 {id_to_title[chat_id]} 的历史记录')
-        logger.info(f'Downloading history from {chat_id}')
-        async for message in client.iter_messages(chat_id):
-            if message.raw_text and len(message.raw_text.strip()) >= 0:
-                uid = message.id
-                if uid % 100 == 0:
-                    await bot.send_message(admin_id, f'还需下载 {uid} 条消息')
-                share_id = get_share_id(chat_id)
-                url = f'https://t.me/c/{share_id}/{message.id}'
-                indexer.index(
-                    content=strip_content(message.raw_text),
-                    url=url,
-                    chat_id=chat_id,
-                    post_timestamp=message.date.timestamp(),
-                )
+        logger.info(f'Downloading history from {chat_id} ({min_id=}, {max_id=})')
+        with indexer.ix.writer() as writer:
+            progress_msg = None
+            async for message in client.iter_messages(chat_id, min_id=min_id, max_id=max_id):
+                # FIXME: it seems that iterating over PM return nothing?
+                if message.raw_text and len(message.raw_text.strip()) >= 0:
+                    uid = message.id
+                    remaining_msg_cnt = uid - min_id
+                    if progress_msg is None:
+                        progress_msg = await bot.send_message(admin_id, f'还需下载 {remaining_msg_cnt} 条消息')
+
+                    if remaining_msg_cnt % 100 == 0:
+                        await bot.edit_message(admin_id, progress_msg, f'还需下载 {remaining_msg_cnt} 条消息')
+                    share_id = get_share_id(chat_id)
+                    url = f'https://t.me/c/{share_id}/{message.id}'
+                    writer.add_document(
+                        content=strip_content(message.raw_text),
+                        url=url,
+                        chat_id=chat_id,
+                        post_time=datetime.fromtimestamp(message.date.timestamp())
+                    )
+        logger.info(f'Complete downloading history from {chat_id}')
         await bot.send_message(admin_id, '下载完成')
 
 
-@bot.on(events.CallbackQuery())
-@log_exception(logger)
+@bot.on(events.CallbackQuery(chats=private_whitelist_strict))
 async def bot_callback_handler(event):
     if event.data and event.data != b'-1':
         page_num = int(event.data)
@@ -204,40 +215,48 @@ async def bot_callback_handler(event):
     await event.answer()
 
 
-@bot.on(events.NewMessage())
-@log_exception(logger)
+@bot.on(events.NewMessage(chats=private_whitelist_strict))
 async def bot_message_handler(event):
-    text = event.raw_text
-    is_private = private_mode and event.chat_id not in private_whitelist
-    logger.info(f'User {event.chat_id} Queries [{text}]')
-    start_time = time()
+    try:
+        text = event.raw_text
+        is_private = private_mode and event.chat_id not in private_whitelist
+        logger.info(f'User {event.chat_id} Queries [{text}]')
+        start_time = time()
 
-    if not (event.raw_text and event.raw_text.strip()):
-        return
+        if not (event.raw_text and event.raw_text.strip()):
+            return
 
-    elif event.raw_text.startswith('/start'):
-        await event.respond(welcome_message, parse_mode='markdown')
+        elif event.raw_text.startswith('/start'):
+            await event.respond(welcome_message, parse_mode='markdown')
 
-    elif event.raw_text.startswith('/random') and random_mode:
-        doc = indexer.retrieve_random_document()
-        respond = f'Random message from <b>{id_to_title[doc["chat_id"]]} [{doc["post_time"]}]</b>\n'
-        respond += f'{doc["url"]}\n'
-        await event.respond(respond, parse_mode='html')
+        elif event.raw_text.startswith('/random') and random_mode:
+            doc = indexer.retrieve_random_document()
+            respond = f'Random message from <b>{id_to_title[doc["chat_id"]]} [{doc["post_time"]}]</b>\n'
+            respond += f'{doc["url"]}\n'
+            await event.respond(respond, parse_mode='html')
 
-    elif event.raw_text.startswith('/download_history') and event.chat_id == admin_id:
-        await event.respond('开始下载历史记录', parse_mode='markdown')
-        indexer.clear()
-        await download_history()
+        elif event.raw_text.startswith('/download_history') and event.chat_id == admin_id:
+            download_args = event.raw_text.split()
+            min_id = max(int(download_args[1]), 1) if len(download_args) > 1 else 1
+            max_id = int(download_args[2]) if len(download_args) > 2 else 1 << 31 - 1
+            await event.respond('开始下载历史记录')
+            if len(download_args) <= 1:
+                indexer.clear()
+            await download_history(min_id=min_id, max_id=max_id)
 
-    else:
-        q = event.raw_text
-        result = indexer.search(q, page_len=page_len, page_num=1)
-        used_time = time() - start_time
-        respond = render_respond_text(result, used_time, is_private)
-        buttons = render_respond_buttons(result, 1)
-        msg = await event.respond(respond, parse_mode='html', buttons=buttons)
+        else:
+            q = event.raw_text
+            result = indexer.search(q, page_len=page_len, page_num=1)
+            used_time = time() - start_time
+            respond = render_respond_text(result, used_time, is_private)
+            buttons = render_respond_buttons(result, 1)
+            msg = await event.respond(respond, parse_mode='html', buttons=buttons)
 
-        db.set('msg-' + str(msg.id) + '-q', q)
+            db.set('msg-' + str(msg.id) + '-q', q)
+    except Exception as e:
+        logger.error(f'Error occurs on processing bot request: {e}')
+        await event.reply(f'Error occurs on processing bot request: {e}')
+        raise e
 
 
 #################################################################################
@@ -245,15 +264,38 @@ async def bot_message_handler(event):
 #################################################################################
 
 
-@log_exception(logger)
 async def init_bot():
-    # put some async initialization actions here
+    await client.get_dialogs()  # fill in entity cache, to make sure that dialogs can be found by id
     for chat_id in chat_ids:
-        print(chat_id)
-        entity = await client.get_entity(chat_id)
-        id_to_title[chat_id] = entity.title
+        entity = await client.get_entity(await client.get_input_entity(chat_id))
+        id_to_title[chat_id] = format_entity_name(entity)
+        logger.info(f'ready to monitor "{id_to_title[chat_id]}" ({chat_id})')
     logger.info('Bot started')
-    await bot.send_message(admin_id, 'I am ready. ')
+
+    admin_input_peer = None  # make IDE happy!
+    try:
+        admin_input_peer = await bot.get_input_entity(admin_id)
+    except ValueError as e:
+        logging.critical(f'Admin ID {admin_id} is invalid, or you have not had any conversation with the bot yet.'
+                         f'Please send a "/start" to the bot and retry. Exiting...', exc_info=e)
+        exit(-1)
+
+    await bot.send_message(admin_input_peer, 'I am ready. ')
+
+    commands = [types.BotCommand(command="download_history", description='[ START[ END]] 下载历史消息')]
+    if random_mode:
+        commands.append(types.BotCommand(command="random", description='随机返回一条已索引消息'))
+
+    try:
+        await bot(
+            SetBotCommandsRequest(
+                scope=types.BotCommandScopePeer(admin_input_peer),
+                lang_code='',
+                commands=commands
+            )
+        )
+    except Exception as e:
+        logger.waring(f'Error occurs on setting bot commands: {e}')
 
 
 loop.run_until_complete(init_bot())
