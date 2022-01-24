@@ -2,7 +2,7 @@
 
 # fix WARNING overcommit_memory is set to 0! Background save may fail under low memory condition.
 
-sysctl vm.overcommit_memory=1
+sudo sysctl vm.overcommit_memory=1
 
 # start redis server
 
