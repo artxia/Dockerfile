@@ -1,20 +1,29 @@
 FROM redis:latest as src-redis
 
-FROM python:3.7-slim
+FROM python:3.9 AS BUILDER
 
 WORKDIR /app
 
 COPY . /app
 
+RUN pip install \
+    --no-cache-dir \
+    --trusted-host pypi.python.org \
+    --use-feature=in-tree-build \
+    --disable-pip-version-check \
+    /app
+
+FROM python:3.9-slim
+
 COPY --from=src-redis /usr/local/bin/redis* /usr/bin/
 COPY redis.conf /etc/redis/redis.conf
+COPY --from=BUILDER \
+    /usr/local/lib/python3.9/site-packages \
+    /usr/local/lib/python3.9/site-packages
 
-RUN pip install telethon pyyaml whoosh jieba redis requests[socks]
-RUN mkdir /data && \
-  sed -i 's/^\(bind .*\)$/# \1/' /etc/redis/redis.conf && \
-  sed -i 's/^\(daemonize .*\)$/# \1/' /etc/redis/redis.conf && \
-  sed -i 's/^\(dir .*\)$/# \1\ndir \/data/' /etc/redis/redis.conf && \
-  sed -i 's/^\(logfile .*\)$/# \1/' /etc/redis/redis.conf
+
+RUN mkdir /usr/local/lib/python3.9 -p
+RUN mkdir /data
 
 VOLUME /data
 
