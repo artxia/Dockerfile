@@ -15,6 +15,10 @@ RUN pip install \
 
 FROM python:3.9-slim
 
+WORKDIR /app
+
+COPY . /app
+
 COPY --from=src-redis /usr/local/bin/redis* /usr/bin/
 COPY redis.conf /etc/redis/redis.conf
 COPY --from=BUILDER \
