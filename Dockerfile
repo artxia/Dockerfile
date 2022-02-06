@@ -17,10 +17,9 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY . /app
-
 COPY --from=src-redis /usr/local/bin/redis* /usr/bin/
 COPY redis.conf /etc/redis/redis.conf
+COPY entrypoint.sh /app/
 COPY --from=BUILDER \
     /usr/local/lib/python3.9/site-packages \
     /usr/local/lib/python3.9/site-packages
