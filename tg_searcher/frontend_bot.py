@@ -5,6 +5,7 @@ from traceback import format_exc
 from argparse import ArgumentParser
 import shlex
 
+import redis
 import whoosh.index
 from telethon import TelegramClient, events, Button
 from telethon.tl.types import Message as TgMessage, \
@@ -70,6 +71,12 @@ class BotFrontend:
         self.chat_ids_parser.add_argument('chats', type=int, nargs='*')
 
     async def start(self):
+        try:
+            self._redis.ping()
+        except redis.exceptions.ConnectionError as e:
+            self._logger.critical(f'Cannot connect to redis server {self._cfg.redis_host}: {e}')
+            raise e
+
         self._logger.info(f'Start init frontend bot')
         await self.bot.start(bot_token=self._cfg.bot_token)
         self._logger.info(f'Bot account login ok')
@@ -178,6 +185,11 @@ class BotFrontend:
                     await event.reply(f'{await self.backend.format_dialog_html(chat_id)} 的索引已清除', parse_mode='html')
             else:
                 await event.reply('全部索引已清除')
+
+        elif text.startswith('/refresh_chat_names'):
+            msg = await event.reply(f'正在刷新后端的对话名称缓存')
+            await self.backend.session.refresh_translate_table()
+            await self.bot.edit_message(msg, f'对话名称缓存刷新完成')
 
         elif text.startswith('/find_chat_id'):
             q = text[14:].strip()
@@ -292,21 +304,20 @@ class BotFrontend:
             BotCommand(command="download_chat", description='[--min=MIN] [--max=MAX] [CHAT_ID...] '
                                                             '下载并索引会话的历史消息，并将其加入监听列表'),
             BotCommand(command="monitor_chat", description='CHAT_ID... 将会话加入监听列表'),
-            BotCommand(command="random", description='随机返回一条已索引消息'),
             BotCommand(command="stat", description='查询后端索引状态'),
             BotCommand(command="clear", description='[CHAT_ID...] 清除索引'),
             BotCommand(command="find_chat_id", description='KEYWORD 根据关键词获取聊天 id'),
-            BotCommand(command="chats", description='选择聊天'),
+            BotCommand(command="refresh_chat_names", description='刷新对话名称缓存'),
         ]
         commands = [
             BotCommand(command="random", description='随机返回一条已索引消息'),
-            BotCommand(command="chats", description='选择聊天'),
+            BotCommand(command="chats", description='选择对话'),
         ]
         await self.bot(
             SetBotCommandsRequest(
                 scope=BotCommandScopePeer(admin_input_peer),
                 lang_code='',
-                commands=admin_commands
+                commands=admin_commands + commands
             )
         )
         await self.bot(
