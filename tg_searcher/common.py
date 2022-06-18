@@ -15,8 +15,21 @@ def ensure_path_exists(path: Path):
     if not path.exists():
         path.mkdir()
 
-def strip_content(content: str) -> str:
+def escape_content(content: str) -> str:
     return html.escape(content).replace('\n', ' ')
+
+def remove_first_word(text: str) -> str:
+    first_space = text.find(' ')
+    if first_space < 0:
+        return ''
+    else:
+        return text[first_space+1:]
+
+def brief_content(content: str, trim_len: int = 20) -> str:
+    if len(content) < trim_len:
+        return content
+    else:
+        return content[:trim_len - 4] + '…' + content[-2:]
 
 def get_share_id(chat_id: int) -> int:
     return resolve_id(chat_id)[0]
@@ -37,16 +50,16 @@ class CommonBotConfig:
         url = url_parse.urlparse(proxy_str)
         return url.scheme, url.hostname, url.port
 
-    def __init__(self, proxy: Optional[str], api_id: int, api_hash: str, runtime_dir: str, name: str):
-        self.proxy: Optional[tuple] = proxy and self._parse_proxy(proxy)
-        self.api_id: int = api_id
-        self.api_hash: str = api_hash
-        self.name: str = name
-        self.runtime_dir: Path = Path(runtime_dir)
-        self.session_dir: Path = self.runtime_dir / name / 'session'
-        self.index_dir: Path = self.runtime_dir / name / 'index'
+    def __init__(self, cfg: dict):
+        self.proxy: Optional[tuple] = cfg.get('proxy') and self._parse_proxy(cfg.get('proxy'))
+        self.api_id: int = cfg['api_id']
+        self.api_hash: str = cfg['api_hash']
+        self.name: str = cfg['name']
+        self.runtime_dir: Path = Path(cfg['runtime_dir'])
+        self.session_dir: Path = self.runtime_dir / cfg['name'] / 'session'
+        self.index_dir: Path = self.runtime_dir / cfg['name'] / 'index'
         ensure_path_exists(self.runtime_dir)
-        ensure_path_exists(self.runtime_dir / name)
+        ensure_path_exists(self.runtime_dir / cfg['name'])
         ensure_path_exists(self.session_dir)
         ensure_path_exists(self.index_dir)
 
