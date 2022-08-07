@@ -10,7 +10,7 @@ on:
     inputs:
 
 env:
-  IMAGE_NAME: tg-searcher-docker
+  IMAGE_NAME: nginx-http-flv-module-docker
 
 jobs:
   build:
