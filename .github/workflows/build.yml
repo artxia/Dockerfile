@@ -16,7 +16,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 100
 
     steps:
     - name: Get the version
