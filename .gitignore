@@ -1,0 +1,7 @@
+/.idea
+/venv
+/dist
+/result
+*.tmp.*
+__pycache__
+*.egg-info
