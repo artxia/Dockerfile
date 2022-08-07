@@ -21,7 +21,7 @@ jobs:
       with:
         git-config-name: GitHub Action
         git-config-email: action@github.com
-        branch: tg_searcher
+        branch: nginx-http-flv-module
         folder: gitclone
         commit-message: Action Update
         clean: true
