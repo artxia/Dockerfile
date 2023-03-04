@@ -17,4 +17,4 @@ WORKDIR /code
 
 RUN pip3 install -r requirements.txt
 
-CMD ["bash"]
+ENTRYPOINT ["python3", "bot/bot.py"]
