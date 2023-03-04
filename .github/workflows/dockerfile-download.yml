@@ -23,7 +23,6 @@ jobs:
         git-config-email: action@github.com
         branch: chatgpt_telegram_bot
         folder: gitclone
-        target-folder: Dockerfile
         commit-message: Action Update
         clean: true
         single-commit: false
