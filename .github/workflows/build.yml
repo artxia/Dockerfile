@@ -10,7 +10,7 @@ on:
     inputs:
 
 env:
-  IMAGE_NAME: gpt4free
+  IMAGE_NAME: master
 
 jobs:
   build:
