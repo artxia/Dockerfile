@@ -1,20 +1,29 @@
-FROM python:3.8-slim
+FROM python:3.11 as builder
 
-ENV PYTHONFAULTHANDLER=1
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONHASHSEED=random
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PIP_NO_CACHE_DIR=off
-ENV PIP_DISABLE_PIP_VERSION_CHECK=on
-ENV PIP_DEFAULT_TIMEOUT=100
+WORKDIR /usr/app
+ENV PATH="/usr/app/venv/bin:$PATH"
 
-RUN apt-get update
-RUN apt-get install -y python3 python3-pip python-dev build-essential python3-venv
+#RUN apt-get update && apt-get install -y git
+RUN mkdir -p /usr/app
+RUN python -m venv ./venv
 
-RUN mkdir -p /code
-ADD . /code
-WORKDIR /code
+COPY requirements.txt .
 
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
-ENTRYPOINT ["python3", "bot/bot.py"]
+# RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+# RUN pip config set global.trusted-host mirrors.aliyun.com
+
+FROM python:3.11
+
+WORKDIR /usr/app
+ENV PATH="/usr/app/venv/bin:$PATH"
+
+COPY --from=builder /usr/app/venv ./venv
+COPY . .
+
+RUN cp ./gui/streamlit_app.py .
+
+CMD ["streamlit", "run", "streamlit_app.py"]
+
+EXPOSE 8501
