@@ -14,13 +14,16 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=True,
+    package_data={
+        'tg_searcher': ['../__version__'],
+    },
     author='Sharzy L',
     author_email='me@sharzy.in',
     url='https://github.com/SharzyL/tg_searcher',
     license='MIT',
     python_requires='>=3.8',
     install_requires=[
-        'telethon~=1.25.0',
+        'telethon~=1.26.0',
         'cryptg',
         'whoosh~=2.7.4',
         'python-socks[asyncio]',
