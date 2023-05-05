@@ -10,7 +10,7 @@ on:
     inputs:
 
 env:
-  IMAGE_NAME: chatgpt_telegram_bot
+  IMAGE_NAME: gpt4free
 
 jobs:
   build:
