@@ -1,20 +1,57 @@
-FROM python:3.8-slim
+# syntax=docker/dockerfile:experimental
 
-ENV PYTHONFAULTHANDLER=1
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONHASHSEED=random
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PIP_NO_CACHE_DIR=off
-ENV PIP_DISABLE_PIP_VERSION_CHECK=on
-ENV PIP_DEFAULT_TIMEOUT=100
+##### 第一阶段：按当前平台构建 Web 静态资源 #####
+FROM --platform=$BUILDPLATFORM oven/bun:latest AS web-builder
 
-RUN apt-get update
-RUN apt-get install -y python3 python3-pip python-dev build-essential python3-venv
+# bun 镜像是 Debian 基础，所以用 apk 会报错，这里直接 apt
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts
 
-RUN mkdir -p /code
-ADD . /code
-WORKDIR /code
+WORKDIR /build
 
-RUN pip3 install -r requirements.txt
+COPY web/package.json web/package-lock.json* ./
+RUN bun install
 
-ENTRYPOINT ["python3", "bot/bot.py"]
+COPY web/ ./
+COPY VERSION ./
+RUN DISABLE_ESLINT_PLUGIN='true' \
+    VITE_REACT_APP_VERSION="$(cat VERSION)" \
+    bun run build
+
+
+##### 第二阶段：多平台 Go 二进制编译 #####
+FROM --platform=$BUILDPLATFORM golang:alpine AS builder2
+
+ARG TARGETOS
+ARG TARGETARCH
+
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=${TARGETOS} \
+    GOARCH=${TARGETARCH}
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 把后端源码和前端产物都拷进来
+COPY . .
+COPY --from=web-builder /build/dist ./web/dist
+
+RUN go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)'" -o one-api
+
+
+##### 第三阶段：瘦身运行时镜像 #####
+FROM alpine:latest
+
+RUN apk update && apk upgrade && \
+    apk add --no-cache ca-certificates tzdata ffmpeg && \
+    update-ca-certificates
+
+COPY --from=builder2 /build/one-api /one-api
+
+EXPOSE 3000
+WORKDIR /data
+ENTRYPOINT ["/one-api"]
