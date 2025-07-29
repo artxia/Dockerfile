@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.ref_name }}
+  IMAGE_NAME: claude-code-proxy
 
 jobs:
   build-and-push:
