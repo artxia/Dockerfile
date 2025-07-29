@@ -10,7 +10,7 @@ on:
     inputs:
 
 env:
-  IMAGE_NAME: gemini-token-manager
+  IMAGE_NAME: claude-code-proxy-enhance
 
 jobs:
   build:
