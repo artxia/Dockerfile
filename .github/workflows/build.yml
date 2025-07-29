@@ -1,6 +1,6 @@
 name: Auto Build
 on:
-  push:
+#  push:
 #    branches:
 #      - master
 #    tags:
