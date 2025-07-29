@@ -1,284 +1,213 @@
-# Gemini Token Manager
+# Claude Code Proxy Enhance
 
-<div align="center">
+A proxy server that enables **Claude Code** to work with OpenAI-compatible API providers. Convert Claude API requests to OpenAI API calls, allowing you to use various LLM providers through the Claude Code CLI.
 
-<img src="logo.svg" alt="Gemini Token Manager Logo" width="180" height="180" />
+![Claude Code Proxy](demo.png)
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Docker](https://img.shields.io/badge/docker-支持-brightgreen)
-![NodeJS](https://img.shields.io/badge/nodejs-16%2B-orange)
+Configuration:
+![Configure](image.png)
 
-**一个用于管理 Gemini API 令牌的负载均衡服务，支持 Docker 部署和数据持久化**  
-**本项目基于[Siliconflow-API-Management](https://github.com/Dr-Ai-0018/Siliconflow-API-Management)的 UI 进行二次开发**  
-[English](./README_EN.md) | 简体中文
+## Features
 
-</div>
+- **Full Claude API Compatibility**: Complete `/v1/messages` endpoint support
+- **Multiple Provider Support**: OpenAI, Azure OpenAI, local models (Ollama), and any OpenAI-compatible API
+- **Web UI for Configuration**: Easy-to-use web interface to manage multiple configuration profiles.
+- **Smart Model Mapping**: Configure BIG and SMALL models via the UI.
+- **Function Calling**: Complete tool use support with proper conversion.
+- **Streaming Responses**: Real-time SSE streaming support.
+- **Image Support**: Base64 encoded image input.
+- **Error Handling**: Comprehensive error handling and logging.
 
-## 📋 目录
+## Quick Start
 
--   [功能特点](#-功能特点)
--   [系统要求](#-系统要求)
--   [快速开始](#-快速开始)
--   [项目结构](#-项目结构)
--   [配置选项](#-配置选项)
--   [常用命令](#-常用命令)
--   [开发指南](#-开发指南)
--   [故障排除](#-故障排除)
--   [贡献指南](#-贡献指南)
--   [许可证](#-许可证)
--   [联系方式](#-联系方式)
-
-## ✨ 功能特点
-
--   🔄 自动初始化数据文件
--   💾 数据持久化存储
--   🐳 Docker 容器化部署
--   🔌 RESTful API 接口
--   ⚙️ 支持环境变量配置
--   🚀 增强的代理功能（新增）
-    - 支持 Google GenAI API 代理
-    - 支持 OpenAI API 代理
-    - 支持流式响应 (SSE) 处理
-    - 详细请求和响应日志记录
--   🔍 环境代理测试工具（新增）
-    - 自动测试代理服务连接性
-    - 支持 Google GenAI 和 OpenAI API 调用测试
-    - 提供详细错误诊断
--   🔑 批量密钥管理功能
-    - 支持批量添加、删除、检测密钥
-    - 支持导出选中密钥
-    - 智能检测无效密钥
--   📊 增强的管理界面
-    - 优化的密钥管理页面
-    - 分页控制功能
-    - 直观的批量操作工具栏
--   🔍 完善的日志系统
-    - 详细的代理服务日志
-    - 增强的错误处理机制
--   📝 丰富的示例代码
-    - Python 调用示例
-    - 支持 Google GenAI 和 OpenAI API 的代码示例
-    - 一键复制功能
-
-## 📌 系统要求
-
--   Docker
--   Docker Compose
--   Node.js 16+ (仅开发环境需要)
-
-## 🚀 快速开始
-
-### 使用 Docker Compose（推荐）
-
-1. 克隆项目
+### 1. Install Dependencies
 
 ```bash
-git clone https://github.com/zqq-nuli/Gemini-Token-Manager.git
-cd gemini-token-manager
+# Using UV (recommended)
+uv sync
+
+# Or using pip
+pip install -r requirements.txt
 ```
 
-2. 启动服务
+### 2. Start Server
 
 ```bash
-docker compose up -d
+# Direct run
+python start_proxy.py
+
+# Or with UV
+uv run claude-code-proxy
+
+# Or with docker
+docker run -d -p 8082:8082 zimpel1/claude-code-proxy-enhance:latest
+
+# Persistent configuration
+docker run -d -p 8082:8082 -v ~/configs:/app/configs zimpel1/claude-code-proxy-enhance:latest 
 ```
 
-服务将在 http://localhost:7001 启动
+### 3. Configure via Web UI
 
-<details>
-<summary>不使用Docker的安装方法</summary>
+After starting the server, open your browser and go to `http://localhost:8082` (or your configured URL).
 
-1. 克隆项目并安装依赖
+- The server will create a default configuration file at `configs/profiles.json` on first run.
+- Use the web interface to create, edit, and switch between configuration profiles.
+- Changes are applied instantly without needing to restart the server.
+
+### 4. Use with Claude Code
 
 ```bash
-git clone https://github.com/zqq-nuli/Gemini-Token-Manager.git
-cd gemini-token-manager
-npm install
+# If ANTHROPIC_API_KEY is not set in the proxy:
+ANTHROPIC_BASE_URL=http://localhost:8082 ANTHROPIC_API_KEY="any-value" claude
+
+# If ANTHROPIC_API_KEY is set in the proxy:
+ANTHROPIC_BASE_URL=http://localhost:8082 ANTHROPIC_API_KEY="exact-matching-key" claude
 ```
 
-2. 启动开发服务器
+## Configuration
+
+Configuration is now managed through a web interface, which saves settings to `configs/profiles.json`.
+
+### Web UI Configuration
+
+- **Profiles**: You can create multiple configuration profiles (e.g., one for OpenAI, one for Azure, one for local models).
+- **Dynamic Reloading**: Activating a new profile applies the settings immediately without a server restart.
+- **Editable Fields**: All major settings, including API keys, base URLs, model names, and server settings, are editable through the UI.
+
+### Environment Variables (for first run)
+
+Environment variables from your `.env` file are used **only on the very first run** to create the initial `default` profile. After that, all configuration is managed through the UI.
+
+### Model Mapping
+
+The proxy maps Claude model requests to your configured models:
+
+| Claude Request                 | Mapped To     | Environment Variable   |
+| ------------------------------ | ------------- | ---------------------- |
+| Models with "haiku"            | `SMALL_MODEL` | Default: `gpt-4o-mini` |
+| Models with "sonnet"           | `MIDDLE_MODEL`| Default: `BIG_MODEL`   |
+| Models with "opus"             | `BIG_MODEL`   | Default: `gpt-4o`      |
+
+### Provider Examples
+
+#### OpenAI
 
 ```bash
-npm run dev
+OPENAI_API_KEY="sk-your-openai-key"
+OPENAI_BASE_URL="https://api.openai.com/v1"
+BIG_MODEL="gpt-4o"
+MIDDLE_MODEL="gpt-4o"
+SMALL_MODEL="gpt-4o-mini"
 ```
 
-</details>
-
-## 📂 项目结构
-
-```
-.
-├── Dockerfile          # Docker构建文件
-├── docker-compose.yml  # Docker Compose配置文件
-├── package.json        # 项目依赖配置
-├── init.js             # 初始化脚本
-├── data/               # 数据存储目录（自动创建）
-└── src/                # 源代码目录
-```
-
-## ⚙️ 配置选项
-
-### PM2 配置
-
-项目使用 PM2 进行进程管理，配置文件位于 `ecosystem.config.js`。主要配置项包括：
-
-| 配置项 | 描述 | 默认值 |
-|--------|------|--------|
-| `instances` | 实例数量 | `max`（生产环境）/ `2`（Docker环境） |
-| `exec_mode` | 执行模式 | `cluster` |
-| `max_memory_restart` | 内存限制 | `300M`（生产环境）/ `150M`（Docker环境） |
-
-### 数据持久化
-
-数据文件默认存储在项目根目录的 `data` 文件夹中。该目录会被自动映射到 Docker 容器内的 `/app/data` 目录。
-
-### 环境变量
-
-可以通过修改 `docker-compose.yml` 文件来配置以下环境变量：
-
-| 变量名       | 描述                   | 默认值       |
-| ------------ | ---------------------- | ------------ |
-| `NODE_ENV`   | 运行环境               | `production` |
-| `FORCE_INIT` | 是否强制重新初始化数据 | `false`      |
-
-## 🛠 常用命令
-
-### PM2 进程管理
+#### Azure OpenAI
 
 ```bash
-# 使用 PM2 启动服务
-npm run pm2
-
-# Docker 环境中使用 PM2 启动服务
-npm run pm2:docker
-
-# 停止服务
-npm run pm2:stop
-
-# 重启服务
-npm run pm2:restart
-
-# 重新加载服务
-npm run pm2:reload
-
-# 删除服务
-npm run pm2:delete
-
-# 查看日志
-npm run pm2:logs
+OPENAI_API_KEY="your-azure-key"
+OPENAI_BASE_URL="https://your-resource.openai.azure.com/openai/deployments/your-deployment"
+BIG_MODEL="gpt-4"
+MIDDLE_MODEL="gpt-4"
+SMALL_MODEL="gpt-35-turbo"
 ```
 
-### 服务管理
+#### Local Models (Ollama)
 
 ```bash
-# 启动服务
-docker compose up -d
-
-# 查看日志
-docker compose logs -f
-
-# 停止服务
-docker compose down
-
-# 重启服务
-docker compose restart
-
-# 重新构建并启动
-docker compose up -d --build
+OPENAI_API_KEY="dummy-key"  # Required but can be dummy
+OPENAI_BASE_URL="http://localhost:11434/v1"
+BIG_MODEL="llama3.1:70b"
+MIDDLE_MODEL="llama3.1:70b"
+SMALL_MODEL="llama3.1:8b"
 ```
 
-### 数据管理
+#### Other Providers
+
+Any OpenAI-compatible API can be used by setting the appropriate `OPENAI_BASE_URL`.
+
+## Usage Examples
+
+### Basic Chat
+
+```python
+import httpx
+
+response = httpx.post(
+    "http://localhost:8082/v1/messages",
+    json={
+        "model": "claude-3-5-sonnet-20241022",  # Maps to MIDDLE_MODEL
+        "max_tokens": 100,
+        "messages": [
+            {"role": "user", "content": "Hello!"}
+        ]
+    }
+)
+```
+
+## Integration with Claude Code
+
+This proxy is designed to work seamlessly with Claude Code CLI:
 
 ```bash
-# 强制重新初始化数据
-# 方法1：删除初始化标记文件
-rm ./data/.initialized
-docker compose restart
+# Start the proxy
+python start_proxy.py
 
-# 方法2：使用环境变量
-FORCE_INIT=true docker compose up -d
+# Use Claude Code with the proxy
+ANTHROPIC_BASE_URL=http://localhost:8082 claude
+
+# Or set permanently
+export ANTHROPIC_BASE_URL=http://localhost:8082
+claude
 ```
 
-## 💻 开发指南
+## Testing
 
-### 本地开发
-
-1. 安装依赖
+Test the proxy functionality:
 
 ```bash
-npm install
+# Run comprehensive tests
+python src/test_claude_to_openai.py
 ```
 
-2. 选择以下任一方式运行服务：
+## Development
+
+### Using UV
 
 ```bash
-# 开发模式
-npm run dev
+# Install dependencies
+uv sync
 
-# 使用 PM2 运行（生产环境）
-npm run pm2
+# Run server
+uv run claude-code-proxy
 
-# Docker 环境中使用 PM2
-npm run pm2:docker
+# Format code
+uv run black src/
+uv run isort src/
+
+# Type checking
+uv run mypy src/
 ```
 
-### 构建生产版本
+### Project Structure
 
-```bash
-npm run build
+```
+claude-code-proxy/
+├── src/
+│   ├── main.py  # Main server
+│   ├── test_claude_to_openai.py    # Tests
+│   └── [other modules...]
+├── start_proxy.py                  # Startup script
+├── .env.example                    # Config template
+└── README.md                       # This file
 ```
 
-## ❓ 故障排除
+## Performance
 
-<details>
-<summary>常见问题及解决方案</summary>
+- **Async/await** for high concurrency
+- **Connection pooling** for efficiency
+- **Streaming support** for real-time responses
+- **Configurable timeouts** and retries
+- **Smart error handling** with detailed logging
 
-1. 如果容器无法启动，检查：
+## License
 
-    - 端口 7001 是否被占用
-    - data 目录权限是否正确
-    - Docker 服务是否正常运行
-
-2. 如果数据初始化失败：
-    - 检查日志 `docker compose logs -f` 或 `npm run pm2:logs`
-    - 确保 data 目录可写
-    - 尝试使用 `FORCE_INIT=true` 重新初始化
-
-3. PM2 相关问题：
-    - 检查 PM2 日志：`npm run pm2:logs`
-    - 内存超限重启：检查 `max_memory_restart` 配置
-    - 集群模式问题：确认 `instances` 配置是否合适
-4. 默认账号与密码
-    - 默认账号密码在项目目录 `/data/config.json` 中
-</details>
-
-## 🤝 贡献指南
-
-欢迎任何形式的贡献！
-
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-查看 [贡献指南](./CONTRIBUTING.md) 获取更多详细信息。
-
-## 📜 许可证
-
-该项目采用 [MIT 许可证](./LICENSE) 进行授权。
-
-## 📮 联系方式
-
-项目维护者: [Benjamin](niuma@chatbot.cab)
-
-GitHub: [@Benjamin](https://github.com/zqq-nuli)
-
----
-
-<div align="center">
-
-**如果您觉得这个项目有用，请给它一个 ⭐️**
-
-</div>
+MIT License

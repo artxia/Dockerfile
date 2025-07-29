@@ -1,12 +1,9 @@
-# docker-compose.yml
-version: '3'
 services:
-  app:
-    build: .
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "7001:7001"
+      - 8082:8082
     volumes:
-      - ./data:/app/data
-    restart: always
-    environment:
-      - NODE_ENV=production
+      - ./.env:/app/.env
