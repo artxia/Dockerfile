@@ -3,14 +3,14 @@ on:
   push:
 #    branches:
 #      - master
-    tags:
-      - '*'
+#    tags:
+#      - '*'
 #  pull_request:
   workflow_dispatch:
     inputs:
 
 env:
-  IMAGE_NAME: master
+  IMAGE_NAME: claude-code-proxy
 
 jobs:
   build:
