@@ -25,4 +25,6 @@ jobs:
         folder: gitclone
         commit-message: Action Update
         clean: true
+        clean-exclude: |
+          Dockerfile
         single-commit: false
