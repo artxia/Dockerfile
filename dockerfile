@@ -2,6 +2,7 @@ FROM node:20-alpine
 
 RUN mkdir -p /code/src /app
 COPY ./package*.json /code
+COPY ./scripts /code/scripts
 COPY ./src /code/src
 RUN cd /code && ls && \
     npm i && \
