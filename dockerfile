@@ -1,16 +1,12 @@
 FROM node:20-alpine
 
-RUN mkdir -p /code/src /app
-COPY ./package*.json /code
-COPY ./scripts /code/scripts
-COPY ./src /code/src
-RUN cd /code && ls && \
-    npm i && \
-    npm run build && \
-    cp dist/* /app
-
 WORKDIR /app
+COPY . .
+RUN npm install -g pnpm && \
+    pnpm install --frozen-lockfile && \
+    cd ui && npm install
+RUN pnpm run build
 
 EXPOSE 3456
 
-CMD ["node", "cli.js", "start"]
+CMD ["node", "dist/cli.js", "start"]
