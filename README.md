@@ -1,5 +1,8 @@
 # Claude Code Router
 
+I am seeking funding support for this project to better sustain its development. If you have any ideas, feel free to reach out to me: [m@musiiot.top](mailto:m@musiiot.top)
+
+
 [中文版](README_zh.md)
 
 > A powerful tool to route Claude Code requests to different models and customize any request.
@@ -38,7 +41,11 @@ Create and configure your `~/.claude-code-router/config.json` file. For more det
 The `config.json` file has several key sections:
 
 - **`PROXY_URL`** (optional): You can set a proxy for API requests, for example: `"PROXY_URL": "http://127.0.0.1:7890"`.
-- **`LOG`** (optional): You can enable logging by setting it to `true`. The log file will be located at `$HOME/.claude-code-router.log`.
+- **`LOG`** (optional): You can enable logging by setting it to `true`. When set to `false`, no log files will be created. Default is `true`.
+- **`LOG_LEVEL`** (optional): Set the logging level. Available options are: `"fatal"`, `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"`. Default is `"info"`.
+- **Logging Systems**: The Claude Code Router uses two separate logging systems:
+  - **Server-level logs**: HTTP requests, API calls, and server events are logged using pino in the `~/.claude-code-router/logs/` directory with filenames like `ccr-*.log`
+  - **Application-level logs**: Routing decisions and business logic events are logged in `~/.claude-code-router/claude-code-router.log`
 - **`APIKEY`** (optional): You can set a secret key to authenticate requests. When set, clients must provide this key in the `Authorization` header (e.g., `Bearer your-secret-key`) or the `x-api-key` header. Example: `"APIKEY": "your-secret-key"`.
 - **`HOST`** (optional): You can set the host address for the server. If `APIKEY` is not set, the host will be forced to `127.0.0.1` for security reasons to prevent unauthorized access. Example: `"HOST": "0.0.0.0"`.
 - **`NON_INTERACTIVE_MODE`** (optional): When set to `true`, enables compatibility with non-interactive environments like GitHub Actions, Docker containers, or other CI/CD systems. This sets appropriate environment variables (`CI=true`, `FORCE_COLOR=0`, etc.) and configures stdin handling to prevent the process from hanging in automated environments. Example: `"NON_INTERACTIVE_MODE": true`.
@@ -312,6 +319,7 @@ Transformers allow you to modify the request and response payloads to ensure com
 - `cleancache`: Clears the `cache_control` field from requests.
 - `vertex-gemini`: Handles the Gemini API using Vertex authentication.
 - `qwen-cli` (experimental): Unofficial support for qwen3-coder-plus model via Qwen CLI [qwen-cli.js](https://gist.github.com/musistudio/f5a67841ced39912fd99e42200d5ca8b).
+- `rovo-cli` (experimental): Unofficial support for gpt-5 via Atlassian Rovo Dev CLI [rovo-cli.js](https://gist.github.com/SaseQ/c2a20a38b11276537ec5332d1f7a5e53).
 
 **Custom Transformers:**
 
@@ -321,7 +329,7 @@ You can also create your own transformers and load them via the `transformers` f
 {
   "transformers": [
     {
-      "path": "$HOME/.claude-code-router/plugins/gemini-cli.js",
+      "path": "/User/xxx/.claude-code-router/plugins/gemini-cli.js",
       "options": {
         "project": "xxx"
       }
@@ -353,7 +361,7 @@ In your `config.json`:
 
 ```json
 {
-  "CUSTOM_ROUTER_PATH": "$HOME/.claude-code-router/custom-router.js"
+  "CUSTOM_ROUTER_PATH": "/User/xxx/.claude-code-router/custom-router.js"
 }
 ```
 
@@ -362,7 +370,7 @@ The custom router file must be a JavaScript module that exports an `async` funct
 Here is an example of a `custom-router.js` based on `custom-router.example.js`:
 
 ```javascript
-// $HOME/.claude-code-router/custom-router.js
+// /User/xxx/.claude-code-router/custom-router.js
 
 /**
  * A custom router function to determine which model to use based on the request.
