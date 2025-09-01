@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: master
+  IMAGE_NAME: z2api
 
 jobs:
   build-and-push:
