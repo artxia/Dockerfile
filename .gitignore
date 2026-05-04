@@ -3,3 +3,10 @@ node_modules
 log.txt
 .idea
 dist
+.DS_Store
+.vscode
+tsconfig.tsbuildinfo
+
+# Documentation build output
+docs/build
+docs/.docusaurus

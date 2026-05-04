@@ -1,10 +1,22 @@
-# Claude Code Router
+![](blog/images/claude-code-router-img.png)
 
-我正在为该项目寻求资金支持，以更好地维持其发展。如果您有任何想法，请随时与我联系: [m@musiiot.top](mailto:m@musiiot.top)
+[![](https://img.shields.io/badge/%F0%9F%87%AC%F0%9F%87%A7-English-000aff?style=flat)](README.md)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?&logo=discord&logoColor=white)](https://discord.gg/rdftVMaUcS)
+[![](https://img.shields.io/github/license/musistudio/claude-code-router)](https://github.com/musistudio/claude-code-router/blob/main/LICENSE)
+
+<hr>
+
+![](blog/images/sponsors/glm-zh.jpg)
+> 本项目由 Z智谱 提供赞助, 他们通过 GLM CODING PLAN 对本项目提供技术支持。
+> GLM CODING PLAN 是专为AI编码打造的订阅套餐，每月最低仅需20元，即可在十余款主流AI编码工具如 Claude Code、Cline、Roo Code 中畅享智谱旗舰模型GLM-4.7（受限于算力，目前仅限Pro用户开放），为开发者提供顶尖的编码体验。
+> 智谱AI为本产品提供了特别优惠，使用以下链接购买可以享受九折优惠：https://www.bigmodel.cn/claude-code?ic=RRVJPB5SII
+
+> [从CLI工具风格看工具渐进式披露](/blog/zh/从CLI工具风格看工具渐进式披露.md)
 
 > 一款强大的工具，可将 Claude Code 请求路由到不同的模型，并自定义任何请求。
 
 ![](blog/images/claude-code.png)
+
 
 ## ✨ 功能
 
@@ -38,7 +50,7 @@ npm install -g @musistudio/claude-code-router
 `config.json` 文件有几个关键部分：
 - **`PROXY_URL`** (可选): 您可以为 API 请求设置代理，例如：`"PROXY_URL": "http://127.0.0.1:7890"`。
 - **`LOG`** (可选): 您可以通过将其设置为 `true` 来启用日志记录。当设置为 `false` 时，将不会创建日志文件。默认值为 `true`。
-- **`LOG_LEVEL`** (可选): 设置日志级别。可用选项包括：`"fatal"`、`"error"`、`"warn"`、`"info"`、`"debug"`、`"trace"`。默认值为 `"info"`。
+- **`LOG_LEVEL`** (可选): 设置日志级别。可用选项包括：`"fatal"`、`"error"`、`"warn"`、`"info"`、`"debug"`、`"trace"`。默认值为 `"debug"`。
 - **日志系统**: Claude Code Router 使用两个独立的日志系统：
   - **服务器级别日志**: HTTP 请求、API 调用和服务器事件使用 pino 记录在 `~/.claude-code-router/logs/` 目录中，文件名类似于 `ccr-*.log`
   - **应用程序级别日志**: 路由决策和业务逻辑事件记录在 `~/.claude-code-router/claude-code-router.log` 文件中
@@ -182,7 +194,7 @@ ccr code
 > ccr restart
 > ```
 
-### 4. UI 模式 (Beta)
+### 4. UI 模式
 
 为了获得更直观的体验，您可以使用 UI 模式来管理您的配置：
 
@@ -194,7 +206,94 @@ ccr ui
 
 ![UI](/blog/images/ui.png)
 
-> **注意**: UI 模式目前处于测试阶段。这是一个 100% vibe coding的项目，包括项目的初始化，我只是新建了一个文件夹和一个project.md文档。所有代码均由 ccr + qwen3-coder + gemini(webSearch) 实现。如有问题请提交 issue。
+### 5. CLI 模型管理
+
+对于偏好终端工作流的用户，可以使用交互式 CLI 模型选择器：
+
+```shell
+ccr model
+```
+
+该命令提供交互式界面来：
+
+- 查看当前配置
+- 查看所有配置的模型（default、background、think、longContext、webSearch、image）
+- 切换模型：快速更改每个路由器类型使用的模型
+- 添加新模型：向现有提供商添加模型
+- 创建新提供商：设置完整的提供商配置，包括：
+   - 提供商名称和 API 端点
+   - API 密钥
+   - 可用模型
+   - Transformer 配置，支持：
+     - 多个转换器（openrouter、deepseek、gemini 等）
+     - Transformer 选项（例如，带自定义限制的 maxtoken）
+     - 特定于提供商的路由（例如，OpenRouter 提供商偏好）
+
+CLI 工具验证所有输入并提供有用的提示来引导您完成配置过程，使管理复杂的设置变得容易，无需手动编辑 JSON 文件。
+
+### 6. 预设管理
+
+预设允许您轻松保存、共享和重用配置。您可以将当前配置导出为预设，并从文件或 URL 安装预设。
+
+```shell
+# 将当前配置导出为预设
+ccr preset export my-preset
+
+# 使用元数据导出
+ccr preset export my-preset --description "我的 OpenAI 配置" --author "您的名字" --tags "openai,生产环境"
+
+# 从本地目录安装预设
+ccr preset install /path/to/preset
+
+# 列出所有已安装的预设
+ccr preset list
+
+# 显示预设信息
+ccr preset info my-preset
+
+# 删除预设
+ccr preset delete my-preset
+```
+
+**预设功能：**
+- **导出**：将当前配置保存为预设目录（包含 manifest.json）
+- **安装**：从本地目录安装预设
+- **敏感数据处理**：导出期间自动清理 API 密钥和其他敏感数据（标记为 `{{field}}` 占位符）
+- **动态配置**：预设可以包含输入架构，用于在安装期间收集所需信息
+- **版本控制**：每个预设包含版本元数据，用于跟踪更新
+
+**预设文件结构：**
+```
+~/.claude-code-router/presets/
+├── my-preset/
+│   └── manifest.json    # 包含配置和元数据
+```
+
+### 7. Activate 命令（环境变量设置）
+
+`activate` 命令允许您在 shell 中全局设置环境变量，使您能够直接使用 `claude` 命令或将 Claude Code Router 与使用 Agent SDK 构建的应用程序集成。
+
+要激活环境变量，请运行：
+
+```shell
+eval "$(ccr activate)"
+```
+
+此命令会以 shell 友好的格式输出必要的环境变量，这些变量将在当前的 shell 会话中设置。激活后，您可以：
+
+- **直接使用 `claude` 命令**：无需使用 `ccr code` 即可运行 `claude` 命令。`claude` 命令将自动通过 Claude Code Router 路由请求。
+- **与 Agent SDK 应用程序集成**：使用 Anthropic Agent SDK 构建的应用程序将自动使用配置的路由器和模型。
+
+`activate` 命令设置以下环境变量：
+
+- `ANTHROPIC_AUTH_TOKEN`: 来自配置的 API 密钥
+- `ANTHROPIC_BASE_URL`: 本地路由器端点（默认：`http://127.0.0.1:3456`）
+- `NO_PROXY`: 设置为 `127.0.0.1` 以防止代理干扰
+- `DISABLE_TELEMETRY`: 禁用遥测
+- `DISABLE_COST_WARNINGS`: 禁用成本警告
+- `API_TIMEOUT_MS`: 来自配置的 API 超时时间
+
+> **注意**：在使用激活的环境变量之前，请确保 Claude Code Router 服务正在运行（`ccr start`）。环境变量仅在当前 shell 会话中有效。要使其持久化，您可以将 `eval "$(ccr activate)"` 添加到您的 shell 配置文件（例如 `~/.zshrc` 或 `~/.bashrc`）中。
 
 #### Providers
 
@@ -320,6 +419,7 @@ Transformers 允许您修改请求和响应负载，以确保与不同提供商 
 -   `longContext`: 用于处理长上下文（例如，> 60K 令牌）的模型。
 -   `longContextThreshold` (可选): 触发长上下文模型的令牌数阈值。如果未指定，默认为 60000。
 -   `webSearch`: 用于处理网络搜索任务，需要模型本身支持。如果使用`openrouter`需要在模型后面加上`:online`后缀。
+-   `image`(测试版): 用于处理图片类任务（采用CCR内置的agent支持），如果该模型不支持工具调用，需要将`config.forceUseImageAgent`属性设置为`true`。
 
 您还可以使用 `/model` 命令在 Claude Code 中动态切换模型：
 `/model provider_name,model_name`
@@ -375,6 +475,12 @@ module.exports = async function router(req, config) {
 请帮我分析这段代码是否存在潜在的优化空间...
 ```
 
+## Status Line (Beta)
+为了在运行时更好的查看claude-code-router的状态，claude-code-router在v1.0.40内置了一个statusline工具，你可以在UI中启用它，
+![statusline-config.png](/blog/images/statusline-config.png)
+
+效果如下：
+![statusline](/blog/images/statusline.png)
 
 ## 🤖 GitHub Actions
 
@@ -461,6 +567,9 @@ jobs:
 非常感谢所有赞助商的慷慨支持！
 
 - [AIHubmix](https://aihubmix.com/)
+- [BurnCloud](https://ai.burncloud.com)
+- [302.AI](https://share.302.ai/ZGVF9w)
+- [Z智谱](https://www.bigmodel.cn/claude-code?ic=FPF9IVAGFJ)
 - @Simon Leischnig
 - [@duanshuaimin](https://github.com/duanshuaimin)
 - [@vrgitadmin](https://github.com/vrgitadmin)
@@ -494,6 +603,7 @@ jobs:
 - @*琢
 - @*成
 - @Z*o
+- @\*琨
 - [@congzhangzh](https://github.com/congzhangzh)
 - @*_
 - @Z\*m
@@ -508,10 +618,57 @@ jobs:
 - @\*光
 - @W\*l
 - [@kesku](https://github.com/kesku)
-- @水\*丫
+- [@biguncle](https://github.com/biguncle)
 - @二吉吉
 - @a\*g
-- @*林
+- @\*林
+- @\*咸
+- @\*明
+- @S\*y
+- @f\*o
+- @\*智
+- @F\*t
+- @r\*c
+- [@qierkang](http://github.com/qierkang)
+- @\*军
+- [@snrise-z](http://github.com/snrise-z)
+- @\*王
+- [@greatheart1000](http://github.com/greatheart1000)
+- @\*王
+- @zcutlip
+- [@Peng-YM](http://github.com/Peng-YM)
+- @\*更
+- @\*.
+- @F\*t
+- @\*政
+- @\*铭
+- @\*叶
+- @七\*o
+- @\*青
+- @\*\*晨
+- @\*远
+- @\*霄
+- @\*\*吉
+- @\*\*飞
+- @\*\*驰
+- @x\*g
+- @\*\*东
+- @\*落
+- @哆\*k
+- @\*涛
+- [@苗大](https://github.com/WitMiao)
+- @\*呢
+- @\d*u
+- @crizcraig
+- s\*s
+- \*火
+- \*勤
+- \*\*锟
+- \*涛
+- \*\*明
+- \*知
+- \*语
+- \*瓜
 
 （如果您的名字被屏蔽，请通过我的主页电子邮件与我联系，以便使用您的 GitHub 用户名进行更新。）
 
