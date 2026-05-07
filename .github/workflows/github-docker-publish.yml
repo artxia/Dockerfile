@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: master
+  IMAGE_NAME: freeai-gateway
 
 jobs:
   build-and-push:
@@ -32,6 +32,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 4. 构建前端（Dockerfile 依赖已构建的 dist）
+      - name: Build frontend
+        run: |
+          cd web/client
+          npm install
+          npm run build
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -47,6 +54,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: web/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
