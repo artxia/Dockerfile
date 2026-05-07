@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  chat2api:
+    image: freeai-gateway:latest
+    ports:
+      - "3013:3000"
+    volumes:
+      - chat2api_data:/root/.chat2api
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  chat2api_data:

@@ -1,7 +1,7 @@
-# FreeAI-Gateway
+# Chat2API Web Edition
 
 <p align="center">
-  <img src="logo.svg" alt="FreeAI-Gateway Logo" width="128" height="128">
+  <img src="build/icons.png" alt="Chat2API Logo" width="128" height="128">
 </p>
 
 <p align="center">
@@ -89,56 +89,42 @@
 
 ## 快速开始
 
-### Docker 部署（推荐）
+### 要求
+
+- Node.js 18+
+- npm
+
+### 启动
 
 ```bash
 # 克隆项目
-git clone https://github.com/spf0209/FreeAI-Gateway.git
-cd FreeAI-Gateway
+git clone <this-repo>
+cd Chat2API
 
-# 1. 构建前端
-cd web/client && npm install && npm run build && cd ../..
-
-# 2. 构建 Docker 镜像
-docker build -f web/Dockerfile -t freeai-gateway:latest .
-
-# 3. 启动容器（端口 3013）
-docker compose -f web/docker-compose.yml up -d
-```
-
-访问 `http://localhost:3013` 即可。
-
-> 数据持久化在 Docker volume `chat2api_data`，容器重建不丢失。
-
-### 本地开发
-
-**要求：** Node.js 18+
-
-```bash
 # 安装依赖
 cd web/server && npm install
 cd ../client && npm install
 
-# 启动后端（端口 3000，同时 serve 前端静态文件）
-cd web/server && npm run dev
+# 启动后端（端口 3000）
+cd web/server
+npm run dev
 
-# 开发模式同时启动前端热更新（可选，端口 3013）
-cd web/client && npm run dev
+# 启动前端开发服务（端口 3013）
+cd web/client
+npm run dev
 ```
 
-### 更新部署
+生产环境：
 
 ```bash
-# 拉取最新代码
-git pull
+# 构建前端
+cd web/client && npm run build
 
-# 重新构建前端
-cd web/client && npm run build && cd ../..
-
-# 重新构建镜像并重启
-docker build -f web/Dockerfile -t freeai-gateway:latest .
-docker compose -f web/docker-compose.yml up -d --force-recreate
+# 后端直接 serve 前端静态文件
+cd web/server && npm start
 ```
+
+访问 `http://localhost:3000` 即可。
 
 ---
 
