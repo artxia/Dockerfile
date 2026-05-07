@@ -1,3 +1,11 @@
+# ---- 构建前端 ----
+FROM node:20-alpine AS client-builder
+WORKDIR /app/web/client
+COPY web/client/package*.json ./
+RUN npm install
+COPY web/client/ ./
+RUN npm run build
+
 # ---- 构建后端依赖 ----
 FROM node:20-alpine AS server-builder
 WORKDIR /app/server
@@ -12,8 +20,8 @@ WORKDIR /app
 # 复制后端（含 node_modules）
 COPY --from=server-builder /app/server ./server
 
-# 直接复制本地已构建的前端静态文件
-COPY web/client/dist ./client/dist
+# 复制构建好的前端静态文件
+COPY --from=client-builder /app/web/client/dist ./client/dist
 
 EXPOSE 3000
 
